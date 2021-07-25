@@ -1,6 +1,51 @@
+require 'pry'
+
 module UglyTrivia
   class Game
-    def  initialize
+    attr_accessor :state
+
+    class State
+      attr_accessor :players, :places, :pop_questions, :science_questions, :sports_questions, :rock_questions, :current_player
+
+      def initialize
+        @players = []
+        @places = Array.new(6, 0)
+        @current_player = 0
+        @pop_questions = []
+        @science_questions = []
+        @sports_questions = []
+        @rock_questions = []
+
+        50.times do |i|
+          @pop_questions.push "Pop Question #{i}"
+          @science_questions.push "Science Question #{i}"
+          @sports_questions.push "Sports Question #{i}"
+          @rock_questions.push "Rock Question #{i}"
+        end
+      end
+
+      def add_player(player_name)
+        @players << Player.new(name: player_name)
+      end
+    end
+
+    class Player
+      attr_accessor :place, :purse, :in_penalty_box
+
+      def initialize(name: nil)
+        @purse = 0
+        @place = 0
+        @name = name
+        @in_penalty_box = false
+      end
+
+      def is_winner?
+        purse == 6
+      end
+    end
+
+    def initialize
+      @state = State.new
       @players = []
       @places = Array.new(6, 0)
       @purses = Array.new(6, 0)
@@ -18,12 +63,27 @@ module UglyTrivia
         @pop_questions.push "Pop Question #{i}"
         @science_questions.push "Science Question #{i}"
         @sports_questions.push "Sports Question #{i}"
-        @rock_questions.push create_rock_question(i)
+        @rock_questions.push "Rock Question #{i}"
       end
     end
 
-    def create_rock_question(index)
-      "Rock Question #{index}"
+    def run
+      return "Cannot play game with two or fewer players" unless is_playable?
+
+      not_a_winner = false
+
+      begin
+        roll(rand(1..5))
+
+        if rand(9) == 7
+          not_a_winner = wrong_answer
+        else
+          not_a_winner = was_correctly_answered
+        end
+      end while not_a_winner
+
+      winning_purse = @purses.index(6)
+      return "#{@players[winning_purse]} has won the game!"
     end
 
     def is_playable?
@@ -31,6 +91,7 @@ module UglyTrivia
     end
 
     def add(player_name)
+      state.add_player(player_name)
       @players.push player_name
       @places[how_many_players] = 0
       @purses[how_many_players] = 0
@@ -38,8 +99,6 @@ module UglyTrivia
 
       puts "#{player_name} was added"
       puts "They are player number #{@players.length}"
-
-      true
     end
 
     def how_many_players
@@ -64,10 +123,8 @@ module UglyTrivia
         else
           puts "#{@players[@current_player]} is not getting out of the penalty box"
           @is_getting_out_of_penalty_box = false
-          end
-
+        end
       else
-
         @places[@current_player] = @places[@current_player] + roll
         @places[@current_player] = @places[@current_player] - 12 if @places[@current_player] > 11
 
@@ -76,30 +133,6 @@ module UglyTrivia
         ask_question
       end
     end
-
-  private
-
-    def ask_question
-      puts @pop_questions.shift if current_category == 'Pop'
-      puts @science_questions.shift if current_category == 'Science'
-      puts @sports_questions.shift if current_category == 'Sports'
-      puts @rock_questions.shift if current_category == 'Rock'
-    end
-
-    def current_category
-      return 'Pop' if @places[@current_player] == 0
-      return 'Pop' if @places[@current_player] == 4
-      return 'Pop' if @places[@current_player] == 8
-      return 'Science' if @places[@current_player] == 1
-      return 'Science' if @places[@current_player] == 5
-      return 'Science' if @places[@current_player] == 9
-      return 'Sports' if @places[@current_player] == 2
-      return 'Sports' if @places[@current_player] == 6
-      return 'Sports' if @places[@current_player] == 10
-      return 'Rock'
-    end
-
-  public
 
     def was_correctly_answered
       if @in_penalty_box[@current_player]
@@ -118,11 +151,7 @@ module UglyTrivia
           @current_player = 0 if @current_player == @players.length
           true
         end
-
-
-
       else
-
         puts "Answer was corrent!!!!"
         @purses[@current_player] += 1
         puts "#{@players[@current_player]} now has #{@purses[@current_player]} Gold Coins."
@@ -146,6 +175,26 @@ module UglyTrivia
     end
 
   private
+
+    def ask_question
+      puts @pop_questions.shift if current_category == 'Pop'
+      puts @science_questions.shift if current_category == 'Science'
+      puts @sports_questions.shift if current_category == 'Sports'
+      puts @rock_questions.shift if current_category == 'Rock'
+    end
+
+    def current_category
+      return 'Pop' if @places[@current_player] == 0
+      return 'Pop' if @places[@current_player] == 4
+      return 'Pop' if @places[@current_player] == 8
+      return 'Science' if @places[@current_player] == 1
+      return 'Science' if @places[@current_player] == 5
+      return 'Science' if @places[@current_player] == 9
+      return 'Sports' if @places[@current_player] == 2
+      return 'Sports' if @places[@current_player] == 6
+      return 'Sports' if @places[@current_player] == 10
+      return 'Rock'
+    end
 
     def did_player_win
       !(@purses[@current_player] == 6)
